@@ -72,6 +72,11 @@ defecto razonables, pero puedes afinar:
   media hasta el final del listado», «detente 2 segundos en la pantalla de confirmación».
 - **Qué pasos deben salir en el manual**: por defecto se documentan los pasos relevantes;
   puedes pedir «solo documenta desde el login» o «incluye también los filtros».
+- **Dispositivo**: por defecto escritorio (1440×900). Pide «en móvil» o un dispositivo
+  concreto («como iPhone 15», «en una tablet») y el vídeo y las capturas salen con ese
+  viewport, user-agent y densidad de píxeles reales (perfiles de `playwright.devices`).
+  En móvil el cursor se dibuja como un dedo (círculo) en lugar de flecha. Puedes grabar
+  el mismo flujo en escritorio y móvil y tener ambos manuales de la misma versión de la app.
 
 ### Ejemplos de peticiones
 
@@ -125,8 +130,9 @@ o un slideshow narrado a partir de las capturas — sin volver a navegar.
 - Elementos sin texto ni etiqueta accesible (iconos pelados) obligan a usar selectores
   CSS; añadir `aria-label`/`title` a esos botones hace el flujo más robusto (y mejora la
   accesibilidad de tu app).
-- El vídeo se graba a 1440×900. Formato `.webm`; si necesitas `.mp4`, conviértelo con
-  ffmpeg: `ffmpeg -i walkthrough.webm walkthrough.mp4`.
+- El vídeo se graba a 1440×900 (o al viewport del dispositivo emulado, en vertical si es
+  móvil). Formato `.webm`; si necesitas `.mp4`, conviértelo con ffmpeg:
+  `ffmpeg -i walkthrough.webm walkthrough.mp4`.
 - El navegador corre en headless: el cursor que ves en el vídeo es un cursor virtual
   inyectado (el puntero real no existe en headless).
 - Aplicaciones detrás de VPN/localhost funcionan sin problema: el navegador corre en tu

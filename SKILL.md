@@ -17,6 +17,7 @@ limpio. Cada acción produce una captura anotada (recuadro sobre el elemento) y 
 - **URL** de inicio.
 - **Tarea** a documentar (ej. "registrarse", "crear un proyecto", "cambiar la contraseña").
 - **Audiencia/tono** del manual (no técnico / técnico / neutro) y **idioma**.
+- **Dispositivo**: escritorio (por defecto) o móvil/tablet si el usuario lo pide.
 - **Credenciales/datos de prueba** si el flujo los requiere (email, etc.). Avisa de que NO
   use datos reales sensibles. Si el flujo necesita login de pago o 2FA, dilo y acuérdalo con el usuario.
 
@@ -24,6 +25,9 @@ limpio. Cada acción produce una captura anotada (recuadro sobre el elemento) y 
 1. `bash "$SKILL_DIR/bin/setup.sh"` → lee la última línea (`local`/`docker`).
 2. Crea `OUT/` y escribe `OUT/meta.json`:
    `{ "url","task","titulo","audiencia","lang","generado":"<fecha ISO>" }`.
+   - **Manual móvil**: añade `"device":"<nombre de playwright.devices>"` (p. ej. `"iPhone 15"`,
+     `"Pixel 7"`, `"iPad Mini"`). El vídeo/capturas salen con ese viewport y el cursor se
+     dibuja como un dedo (círculo). Escribe meta.json ANTES de arrancar el driver (lo lee al inicio).
 3. Arranca el driver EN SEGUNDO PLANO (mantiene la sesión viva y graba vídeo):
    `node "$SKILL_DIR/bin/driver.mjs" "<OUT>"`  (run_in_background)
    - Si el setup dio `docker`, ejecuta el driver dentro del contenedor montando ambos

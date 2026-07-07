@@ -4,7 +4,7 @@
 //
 // Uso (en segundo plano):  node bin/driver.mjs <outDir>
 // El cliente `act.mjs` es quien encola comandos y espera resultados.
-import { chromium } from 'playwright';
+import { chromium, devices } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -21,23 +21,46 @@ const stateFile = path.join(outDir, 'state.json');
 fs.writeFileSync(cmdFile, fs.existsSync(cmdFile) ? fs.readFileSync(cmdFile) : '');
 const setState = (o) => fs.writeFileSync(stateFile, JSON.stringify(o, null, 2));
 
-const VIEWPORT = { width: 1440, height: 900 };
+// Emulación de dispositivo (opcional): campo "device" en meta.json con un nombre del
+// registro de Playwright ("iPhone 15", "Pixel 7", ...). Sin él, escritorio 1440×900.
+let meta = {};
+try { meta = JSON.parse(fs.readFileSync(path.join(outDir, 'meta.json'), 'utf8')); } catch { /* sin meta */ }
+let deviceProfile = null;
+if (meta.device) {
+  deviceProfile = devices[meta.device];
+  if (!deviceProfile) {
+    console.error('Dispositivo desconocido: "' + meta.device + '". Usa un nombre de playwright.devices, p. ej. "iPhone 15", "Pixel 7", "iPad Mini".');
+    process.exit(1);
+  }
+}
+const VIEWPORT = deviceProfile?.viewport ?? { width: 1440, height: 900 };
+const IS_TOUCH = Boolean(deviceProfile?.hasTouch);
 const browser = await chromium.launch({ headless: true, slowMo: 250 });
 const context = await browser.newContext({
-  viewport: VIEWPORT,
+  ...(deviceProfile ?? { viewport: VIEWPORT }),
   recordVideo: { dir: videoDir, size: VIEWPORT },
 });
 // Cursor virtual: Playwright no graba el puntero del sistema, así que dibujamos uno
 // dentro de la página (sigue los eventos reales de ratón) + onda al hacer clic.
-await context.addInitScript(() => {
+// En perfiles táctiles el cursor es un "dedo" (círculo), la convención en tutoriales móviles.
+await context.addInitScript(({ touch }) => {
   const install = () => {
     if (document.getElementById('__am_cursor')) return;
     const c = document.createElement('div');
     c.id = '__am_cursor';
-    c.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M5.5 3.2 19 12.6l-6.3 1.2 3.5 6.3-2.7 1.4-3.4-6.4-4.6 4.5z" fill="#1a1a1a" stroke="#fff" stroke-width="1.5"/></svg>';
+    if (touch) {
+      Object.assign(c.style, {
+        width: '30px', height: '30px', borderRadius: '50%',
+        background: 'rgba(30,30,30,.3)', border: '2px solid rgba(255,255,255,.85)',
+        boxShadow: '0 1px 4px rgba(0,0,0,.35)', margin: '-16px 0 0 -16px',
+      });
+    } else {
+      c.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M5.5 3.2 19 12.6l-6.3 1.2 3.5 6.3-2.7 1.4-3.4-6.4-4.6 4.5z" fill="#1a1a1a" stroke="#fff" stroke-width="1.5"/></svg>';
+      c.style.margin = '-2px 0 0 -2px';
+    }
     Object.assign(c.style, {
       position: 'fixed', left: '-100px', top: '-100px', zIndex: 2147483647,
-      pointerEvents: 'none', margin: '-2px 0 0 -2px',
+      pointerEvents: 'none',
     });
     (document.body || document.documentElement).appendChild(c);
     document.addEventListener('mousemove', (e) => {
@@ -58,7 +81,7 @@ await context.addInitScript(() => {
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
   else install();
-});
+}, { touch: IS_TOUCH });
 const page = await context.newPage();
 const video = page.video();
 // Inicio de la grabación: los timestamps de cada paso (t/tEnd) son ms desde aquí,
