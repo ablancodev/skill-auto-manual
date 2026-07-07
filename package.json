@@ -1,0 +1,11 @@
+{
+  "name": "auto-manual",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Genera manuales de uso (capturas anotadas + vídeo + Markdown/HTML) navegando una web/app real con Playwright.",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "playwright": "^1.61.0"
+  }
+}
