@@ -102,6 +102,11 @@ manuals/20260707-123503-crear-factura/
 └── steps.jsonl          ← registro de cada acción (auditable/reproducible)
 ```
 
+Cada línea de `steps.jsonl` incluye `t` y `tEnd`: milisegundos desde el inicio de la
+grabación en que empieza y termina el paso. Con eso se puede post-procesar el vídeo de
+forma sincronizada: generar locución por TTS a partir de los `caption`, subtítulos `.srt`,
+o un slideshow narrado a partir de las capturas — sin volver a navegar.
+
 ## Posibles usos
 
 - **Documentación de producto**: manual de usuario que se regenera con cada release.

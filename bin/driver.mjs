@@ -61,6 +61,9 @@ await context.addInitScript(() => {
 });
 const page = await context.newPage();
 const video = page.video();
+// Inicio de la grabación: los timestamps de cada paso (t/tEnd) son ms desde aquí,
+// para poder sincronizar locución/subtítulos con el vídeo en post-proceso.
+const t0 = Date.now();
 setState({ status: 'ready', step: 0 });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -132,7 +135,7 @@ async function shot(id, res) {
 function append(res) { fs.appendFileSync(stepFile, JSON.stringify(res) + '\n'); }
 
 async function handle(cmd) {
-  const res = { id: cmd.id, action: cmd.action, caption: cmd.caption || '', ok: true };
+  const res = { id: cmd.id, action: cmd.action, caption: cmd.caption || '', ok: true, t: Date.now() - t0 };
   try {
     switch (cmd.action) {
       case 'goto':
@@ -169,6 +172,7 @@ async function handle(cmd) {
   }
   res.url = page.url();
   try { res.title = await page.title(); } catch { /* nada */ }
+  res.tEnd = Date.now() - t0;
   append(res);
   setState({ status: 'running', step: cmd.id });
   return cmd.action === 'done';
