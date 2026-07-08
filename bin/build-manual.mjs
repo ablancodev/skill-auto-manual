@@ -15,7 +15,9 @@ const steps = fs.readFileSync(path.join(outDir, 'steps.jsonl'), 'utf8')
 
 // Solo los pasos con caption entran como "paso del manual"; el resto quedan como soporte.
 const manualSteps = steps.filter((s) => (s.caption || '').trim().length > 0);
-const video = state.video || (fs.existsSync(path.join(outDir, 'video', 'walkthrough.webm')) ? 'video/walkthrough.webm' : null);
+// Preferimos el mp4 recortado (trim-video.mjs, sin tiempos muertos) sobre el webm crudo.
+const video = fs.existsSync(path.join(outDir, 'video', 'walkthrough.mp4')) ? 'video/walkthrough.mp4'
+  : state.video || (fs.existsSync(path.join(outDir, 'video', 'walkthrough.webm')) ? 'video/walkthrough.webm' : null);
 
 const title = meta.titulo || `Cómo: ${meta.task}`;
 

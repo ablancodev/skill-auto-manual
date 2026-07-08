@@ -4,8 +4,9 @@ Skill global de [Claude Code](https://claude.com/claude-code) que genera **manua
 vídeo-tutoriales automáticos** de cualquier aplicación web: Claude conduce un navegador real
 (Playwright) para completar la tarea que le pidas, y de ese recorrido salen:
 
-- 🎬 `video/walkthrough.webm` — vídeo del recorrido completo, **con cursor visible**
-  (flecha que se desplaza hasta cada elemento y onda azul en cada clic).
+- 🎬 `video/walkthrough.mp4` — vídeo del recorrido **editado**: se recortan automáticamente
+  los tiempos muertos entre pasos, **con cursor visible** (flecha que se desplaza hasta cada
+  elemento y onda azul en cada clic). Se conserva también el `walkthrough.webm` crudo.
 - 🖼️ `screenshots/` — una captura por paso, **anotada** con un recuadro rojo sobre el
   elemento que hay que pulsar o rellenar.
 - 📄 `manual.md` / `manual.html` — manual paso a paso montado con esas capturas y textos
@@ -29,6 +30,7 @@ Por debajo hay tres piezas (`bin/`):
 |---|---|
 | `driver.mjs` | Mantiene abierto un Chromium con grabación de vídeo y cursor virtual, y ejecuta las acciones que le llegan por `commands.jsonl`. |
 | `act.mjs` | Cliente: encola una acción JSON y devuelve el resultado + captura. |
+| `trim-video.mjs` | Recorta del vídeo los tiempos muertos entre pasos (usando los timestamps de `steps.jsonl`) y lo exporta a `walkthrough.mp4` (H.264). |
 | `build-manual.mjs` | Monta `manual.md` y `manual.html` a partir de los pasos con caption. |
 
 ## Requisitos
@@ -101,7 +103,8 @@ o tono (técnico / no técnico) sin volver a navegar. Pídelo en la misma sesió
 manuals/20260707-123503-crear-factura/
 ├── manual.html          ← manual visual (ábrelo en el navegador)
 ├── manual.md            ← misma guía en Markdown (para wikis/repos)
-├── video/walkthrough.webm
+├── video/walkthrough.mp4   ← editado, sin tiempos muertos (para compartir)
+├── video/walkthrough.webm  ← grabación cruda completa
 ├── screenshots/step-NN.png
 ├── meta.json            ← URL, tarea, idioma, fecha
 └── steps.jsonl          ← registro de cada acción (auditable/reproducible)
@@ -131,8 +134,9 @@ o un slideshow narrado a partir de las capturas — sin volver a navegar.
   CSS; añadir `aria-label`/`title` a esos botones hace el flujo más robusto (y mejora la
   accesibilidad de tu app).
 - El vídeo se graba a 1440×900 (o al viewport del dispositivo emulado, en vertical si es
-  móvil). Formato `.webm`; si necesitas `.mp4`, conviértelo con ffmpeg:
-  `ffmpeg -i walkthrough.webm walkthrough.mp4`.
+  móvil). El `.webm` crudo graba en tiempo real (incluye las pausas en que Claude "piensa"
+  entre acciones); el `.mp4` recortado es la versión presentable. Si quieres otro ajuste,
+  `trim-video.mjs` admite `--pad-ms` (margen por paso) y `--tail-ms` (cola final).
 - El navegador corre en headless: el cursor que ves en el vídeo es un cursor virtual
   inyectado (el puntero real no existe en headless).
 - Aplicaciones detrás de VPN/localhost funcionan sin problema: el navegador corre en tu

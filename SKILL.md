@@ -54,18 +54,26 @@ Reglas del bucle:
 2. Avanza paso a paso hacia la tarea. **Pon `caption` solo a los pasos que deben salir en el
    manual** (los movimientos de apoyo, como un scroll exploratorio, pueden ir sin caption).
 3. Escribe captions claros, en imperativo y en el tono/idioma pedido ("Haz clic en «Crear cuenta»").
-4. Si una acción devuelve `ok:false`, mira la captura del error, corrige (otro texto/selector) y reintenta.
+4. Si una acción devuelve `ok:false` (o `ok:true` pero la pantalla no cambió), mira la captura,
+   corrige (otro texto/selector) y reintenta SIN caption; cuando el intento bueno confirme el
+   avance, repítelo conceptualmente poniendo el caption a ESE. Si algún intento fallido quedó
+   con caption, límpialo en `steps.jsonl` (deja `caption:""`) antes de montar el manual.
 5. Cuando completes la tarea, haz un `screenshot` del estado final con caption, y luego `done`.
 6. No inventes pasos: documenta lo que realmente ocurre en pantalla.
 
 ## Paso 4 — Monta el manual
 1. Espera a que `OUT/state.json` tenga `status: "done"` (el vídeo se vuelca al cerrar).
-2. `node "$SKILL_DIR/bin/build-manual.mjs" "<OUT>"` → genera `manual.md` y `manual.html`.
+2. `node "$SKILL_DIR/bin/trim-video.mjs" "<OUT>"` → genera `video/walkthrough.mp4` recortando
+   los tiempos muertos entre pasos (las esperas mientras decides). Usa los timestamps de
+   `steps.jsonl`, así que ejecútalo DESPUÉS de limpiar reintentos si tocaste el jsonl no pasa
+   nada (solo usa t/tEnd). Si falla (sin ffmpeg), sigue con el `.webm` y avisa al usuario.
+3. `node "$SKILL_DIR/bin/build-manual.mjs" "<OUT>"` → genera `manual.md` y `manual.html`
+   (enlaza el mp4 recortado si existe; si no, el webm).
 
 ## Paso 5 — Entrega
 Reporta al usuario y abre `OUT/manual.html`. Lista lo generado:
 - `manual.html` / `manual.md` (manual con capturas anotadas)
-- `video/walkthrough.webm` (vídeo del recorrido)
+- `video/walkthrough.mp4` (vídeo editado, sin tiempos muertos) y `walkthrough.webm` (crudo)
 - `screenshots/` (capturas por paso)
 Recuérdale que es un **borrador automático**: conviene una revisión humana antes de publicar,
 y que con re-ejecutar se **regenera con capturas frescas** cuando cambie la UI.
@@ -73,6 +81,9 @@ y que con re-ejecutar se **regenera con capturas frescas** cuando cambie la UI.
 ## Notas
 - El vídeo muestra un cursor virtual (en headless no se graba el puntero real): el driver
   anima el ratón hasta cada elemento antes de pulsar y dibuja una onda en cada clic.
+- El navegador (y la grabación) no arranca hasta el primer comando, así el webm no empieza
+  en blanco. El webm crudo aun así graba en tiempo real (incluye tus esperas entre acciones);
+  el mp4 de `trim-video.mjs` es la versión presentable.
 - Multi-idioma/tono: para varias versiones, repite Paso 3-4 cambiando `lang`/tono en `meta.json`
   y los captions (la navegación puede reusarse).
 - Tonos por persona: puedes encarnar una persona (lenguaje simple vs técnico) para los captions.

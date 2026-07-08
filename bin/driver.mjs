@@ -35,15 +35,31 @@ if (meta.device) {
 }
 const VIEWPORT = deviceProfile?.viewport ?? { width: 1440, height: 900 };
 const IS_TOUCH = Boolean(deviceProfile?.hasTouch);
-const browser = await chromium.launch({ headless: true, slowMo: 250 });
-const context = await browser.newContext({
-  ...(deviceProfile ?? { viewport: VIEWPORT }),
-  recordVideo: { dir: videoDir, size: VIEWPORT },
-});
+
+// Arranque PEREZOSO: la grabación de vídeo empieza al crear la página, así que no
+// abrimos el navegador hasta que llega el primer comando. Sin esto, el vídeo arranca
+// con varios segundos en blanco (la espera entre lanzar el driver y el primer `goto`).
+let browser = null, context = null, page = null, video = null, t0 = 0;
+
+async function ensurePage() {
+  if (page) return;
+  browser = await chromium.launch({ headless: true, slowMo: 250 });
+  context = await browser.newContext({
+    ...(deviceProfile ?? { viewport: VIEWPORT }),
+    recordVideo: { dir: videoDir, size: VIEWPORT },
+  });
+  await installCursor(context);
+  page = await context.newPage();
+  video = page.video();
+  // Inicio de la grabación: los timestamps de cada paso (t/tEnd) son ms desde aquí,
+  // para sincronizar locución/subtítulos o recortar tiempos muertos (trim-video.mjs).
+  t0 = Date.now();
+}
+
 // Cursor virtual: Playwright no graba el puntero del sistema, así que dibujamos uno
 // dentro de la página (sigue los eventos reales de ratón) + onda al hacer clic.
 // En perfiles táctiles el cursor es un "dedo" (círculo), la convención en tutoriales móviles.
-await context.addInitScript(({ touch }) => {
+const installCursor = (context) => context.addInitScript(({ touch }) => {
   const install = () => {
     if (document.getElementById('__am_cursor')) return;
     const c = document.createElement('div');
@@ -82,11 +98,7 @@ await context.addInitScript(({ touch }) => {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
   else install();
 }, { touch: IS_TOUCH });
-const page = await context.newPage();
-const video = page.video();
-// Inicio de la grabación: los timestamps de cada paso (t/tEnd) son ms desde aquí,
-// para poder sincronizar locución/subtítulos con el vídeo en post-proceso.
-const t0 = Date.now();
+
 setState({ status: 'ready', step: 0 });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -158,6 +170,7 @@ async function shot(id, res) {
 function append(res) { fs.appendFileSync(stepFile, JSON.stringify(res) + '\n'); }
 
 async function handle(cmd) {
+  await ensurePage();
   const res = { id: cmd.id, action: cmd.action, caption: cmd.caption || '', ok: true, t: Date.now() - t0 };
   try {
     switch (cmd.action) {
@@ -203,14 +216,14 @@ async function handle(cmd) {
 
 async function shutdown() {
   setState({ status: 'closing', step: -1 });
-  try { await context.close(); } catch { /* nada */ }
+  if (context) try { await context.close(); } catch { /* nada */ }
   let rel = null;
-  try {
+  if (video) try {
     const raw = await video.path();
     rel = 'video/walkthrough.webm';
     fs.renameSync(raw, path.join(outDir, rel));
   } catch { /* sin vídeo */ }
-  try { await browser.close(); } catch { /* nada */ }
+  if (browser) try { await browser.close(); } catch { /* nada */ }
   setState({ status: 'done', video: rel });
   process.exit(0);
 }
